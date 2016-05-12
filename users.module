@@ -1,0 +1,99 @@
+<?php
+/**
+ * @file
+ * A block module that displays recent blog and forum posts.
+ */
+
+/**
+* Implements hook_help().
+*
+* Displays help and module information.
+*
+* @param path
+*   Which path of the site we're using to display help
+* @param arg
+*   Array that holds the current path as returned from arg() function
+*/
+function users_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#users":
+      return '' . t("A block module that lists User profile Fields.") . '';
+      break;
+  }
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function users_block_info() {
+  $blocks['users'] = array(
+    // The name that will appear in the block list.
+    'info' => t('Users Profile Report'),
+    // Default setting.
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+  );
+  return $blocks;
+}
+
+/**
+ * Custom content function.
+ *
+ * Set beginning and end dates, retrieve posts from database
+ * saved in that time period.
+ *
+ * @return
+ *   A result set of the targeted posts.
+ */
+function getUsers(){
+  /**
+   * Use Database API to retrieve current posts.
+   *
+   * db_select('table_name', 'table_alias')
+   * fields('table_alias', 'array_of_fileds')
+   * condition('field', 'value')
+   * orderBy('field','DESC')
+   *
+   * @return
+   *   A result set of the targeted posts.
+   */
+  $query = db_select('users', 'u')
+    ->fields('u', array('uid', 'name', 'mail', 'login'))
+    ->condition('uid', 1, '>=') //Published. 'BETWEEN')
+    ->orderBy('created', 'DESC') //Most recent first.
+    ->execute();
+  return $query;
+}
+
+function users_block_view($delta = '') {
+  switch ($delta) {
+    case 'users':
+      $block['subject'] = t('Users Profile Fields');
+      if (user_access('access content')) {
+        //  Use our custom function to retrieve data.
+        $result = getUsers();
+        // Array to contain items for the block to render.
+        $items = array();
+        // Iterate over the result set and format as links.
+        foreach ($result as $user) {
+          $items[] = array(
+            $user->uid,
+            l($user->name, 'user/' . $user->uid),
+            $user->mail,
+            date("m-d-Y", $user->login),
+          );
+        }
+
+        // drupal_set_message('<pre>' . print_r($items, TRUE) . '</pre>');
+        // No content in the last week.
+        if (empty($items)) {
+          $block['content'] = t('No users available.');
+        }
+        else {
+          //Pass data through theme function.
+          $block['content'] = theme('table', array(
+            'rows' => $items));
+        }
+      }
+    return $block;
+  }
+}

@@ -1,0 +1,3 @@
+name = Users Report
+description = A block module that lists User profile Fields.
+core = 7.x
